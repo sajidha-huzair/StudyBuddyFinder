@@ -1,0 +1,62 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# Node
+node_modules/
+Client/dist/
+Client/build/
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Django
+Server/media/
+Server/staticfiles/
+*.log
+db.sqlite3
+
+# Local-only docs
+INTERVIEW_PREP_ANSWERS.md
+Client/README.md
+Client/QUICKSTART.md
+Client/COMPONENTS.md
+Client/DOCUMENTATION.md
+Client/NAVIGATION.md
+Client/API_INTEGRATION.md
+Client/PROJECT_SUMMARY.md
+Server/README.md
+Server/API_DOCUMENTATION.md
+
+# Private dev notes and code explanations 
+local/
+dev-notes/
+
+# Legacy / dev-only (
+Server/old_fastapi_backup/
+Server/scripts/seed_match_test_users.py
+Server/scripts/seed_amara_match.py
+Server/scripts/debug_sessions.py
+Server/scripts/smoke_test.py
+Server/scripts/apply_phase2_schema.py
+Server/scripts/phase2_schema.sql
+Server/add_django_columns.sql
+Server/test_all_endpoints.py
+Server/test_api.py
+Server/test_login_email.py
+Server/test_register.py
+Server/verify_django.py
+Server/view_database.py

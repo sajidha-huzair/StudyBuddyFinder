@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+media/
+staticfiles/
+*.md
+.git/
+.gitignore
+scripts/seed_*.py
+scripts/smoke_test.py
+scripts/debug_sessions.py
+old_fastapi_backup/

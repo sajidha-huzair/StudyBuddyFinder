@@ -1,0 +1,175 @@
+.profile-setup {
+  min-height: 100vh;
+  background: var(--page-accent-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+}
+
+.setup-container {
+  max-width: 800px;
+  width: 100%;
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-2xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.setup-header {
+  text-align: center;
+  margin-bottom: var(--spacing-2xl);
+}
+
+.setup-header h1 {
+  font-size: var(--font-size-2xl);
+  margin-bottom: var(--spacing-sm);
+}
+
+.setup-header p {
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xl);
+}
+
+.progress-bar {
+  height: 8px;
+  background: var(--border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+  transition: width var(--transition-base);
+}
+
+/* Profile Tabs */
+.profile-tabs {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-2xl);
+  border-bottom: 2px solid var(--border);
+}
+
+.profile-tabs button {
+  background: none;
+  border: none;
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all var(--transition-fast);
+  margin-bottom: -2px;
+}
+
+.profile-tabs button:hover {
+  color: var(--primary-color);
+}
+
+.profile-tabs button.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+.form-step h2 {
+  margin-bottom: var(--spacing-sm);
+}
+
+.form-step > p {
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xl);
+}
+
+.checkbox-grid,
+.radio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.checkbox-card,
+.radio-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md);
+  background: var(--background);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.checkbox-card:hover,
+.radio-card:hover {
+  border-color: var(--primary-color);
+  background: var(--primary-tint-soft);
+}
+
+.checkbox-card input,
+.radio-card input {
+  position: absolute;
+  opacity: 0;
+}
+
+.checkbox-card input:checked ~ span,
+.radio-card input:checked ~ span {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.checkbox-card input:checked,
+.radio-card input:checked {
+  & + span::before {
+    border-color: var(--primary-color);
+    background: var(--primary-color);
+  }
+}
+
+.checkbox-card:has(input:checked),
+.radio-card:has(input:checked) {
+  border-color: var(--primary-color);
+  background: var(--primary-tint);
+}
+
+.form-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: flex-end;
+  margin-top: var(--spacing-2xl);
+  padding-top: var(--spacing-xl);
+  border-top: 1px solid var(--border);
+}
+
+textarea.input-field {
+  resize: vertical;
+  font-family: var(--font-family);
+}
+
+.text-muted {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 768px) {
+  .checkbox-grid,
+  .radio-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+
+  .profile-setup-container {
+    padding: var(--spacing-md);
+  }
+}
