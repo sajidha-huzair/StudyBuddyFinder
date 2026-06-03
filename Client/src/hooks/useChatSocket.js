@@ -1,10 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-
-const getWebSocketUrl = () => {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
-  const base = apiUrl.replace('/api', '').replace(/^http/, 'ws');
-  return `${base}/ws/chat/`;
-};
+import { getWebSocketUrl } from '../config/env.js';
 
 const useChatSocket = ({ onMessage, onTyping, onReadReceipt } = {}) => {
   const socketRef = useRef(null);
