@@ -54,6 +54,11 @@ const GoogleAuthBlock = ({ mode = 'signin', onSuccess }) => {
       <div ref={wrapRef} className="google-btn-wrap">
         <div ref={btnRef} className="google-btn-mount" />
       </div>
+      {import.meta.env.DEV && (
+        <p className="text-muted google-dev-hint" style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
+          Google button requires <code>http://localhost:3000</code> in Google Cloud → Credentials → Authorized JavaScript origins.
+        </p>
+      )}
       <div className="auth-divider">
         <span>{mode === 'signup' ? 'or sign up with email' : 'or sign in with email'}</span>
       </div>

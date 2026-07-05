@@ -34,10 +34,18 @@ class RecommendationSerializer(serializers.Serializer):
     year = serializers.CharField(source='user.year', allow_null=True)
     bio = serializers.CharField(source='user.bio', allow_null=True)
     educationLevel = serializers.CharField(source='user.education_level', allow_null=True)
+    gradeBand = serializers.CharField(source='user.grade_band', allow_null=True)
+    grade = serializers.CharField(source='user.grade', allow_null=True)
+    stream = serializers.CharField(source='user.stream', allow_null=True)
+    medium = serializers.CharField(source='user.medium', allow_null=True)
+    examYear = serializers.IntegerField(source='user.exam_year', allow_null=True)
+    district = serializers.CharField(source='user.district', allow_null=True)
+    school = serializers.CharField(source='user.university', allow_null=True)
     subjects = serializers.SerializerMethodField()
     strengths = serializers.SerializerMethodField()
     weaknesses = serializers.SerializerMethodField()
     learningStyle = serializers.SerializerMethodField()
+    learningStyles = serializers.SerializerMethodField()
     studyGoals = serializers.SerializerMethodField()
     compatibilityScore = serializers.FloatField(source='compatibility_score')
     matchReasons = serializers.SerializerMethodField()
@@ -63,7 +71,11 @@ class RecommendationSerializer(serializers.Serializer):
         return obj['profile'].get('weaknesses', [])
 
     def get_learningStyle(self, obj):
-        return obj['profile'].get('learning_style', '')
+        styles = obj['profile'].get('learning_styles', [])
+        return ', '.join(styles) if styles else ''
+
+    def get_learningStyles(self, obj):
+        return obj['profile'].get('learning_styles', [])
 
     def get_studyGoals(self, obj):
         return obj['profile'].get('study_goals', [])

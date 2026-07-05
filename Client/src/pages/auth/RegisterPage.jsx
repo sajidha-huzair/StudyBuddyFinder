@@ -10,6 +10,7 @@ import './AuthPages.css';
 const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [emailTaken, setEmailTaken] = useState(false);
   const { register, loginWithGoogle } = useAuth();
 
   const formik = useFormik({
@@ -37,6 +38,7 @@ const RegisterPage = () => {
         .required('Please confirm your password')
     }),
     onSubmit: async (values, { setSubmitting, setFieldError }) => {
+      setEmailTaken(false);
       try {
         await register({
           name: values.name,
@@ -44,7 +46,10 @@ const RegisterPage = () => {
           password: values.password
         });
       } catch (error) {
-        setFieldError('email', error.response?.data?.message || 'Registration failed');
+        const msg = error?.formatted || error?.message || error?.email?.[0] || 'Registration failed';
+        const taken = /already exists|signing in/i.test(msg);
+        setEmailTaken(taken);
+        setFieldError('email', msg);
       } finally {
         setSubmitting(false);
       }
@@ -98,6 +103,12 @@ const RegisterPage = () => {
               </div>
               {formik.touched.email && formik.errors.email && (
                 <span className="error-message">{formik.errors.email}</span>
+              )}
+              {emailTaken && (
+                <p className="auth-hint-login">
+                  This email is already registered.{' '}
+                  <Link to="/login" state={{ email: formik.values.email }}>Sign in here</Link>
+                </p>
               )}
             </div>
 

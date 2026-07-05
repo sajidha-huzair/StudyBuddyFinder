@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }) => {
       navigate('/profile/setup');
       return response;
     } catch (error) {
-      const msg = error?.error || error?.message || 'Registration failed';
+      const msg = error?.formatted || error?.message || error?.error || 'Registration failed';
       toast.error(msg);
       throw error;
     }

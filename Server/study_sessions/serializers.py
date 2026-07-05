@@ -40,20 +40,28 @@ class StudySessionSerializer(serializers.ModelSerializer):
     endedAt = serializers.DateTimeField(source='ended_at', read_only=True)
     actualDuration = serializers.IntegerField(source='actual_duration_minutes', read_only=True)
     sessionFormat = serializers.SerializerMethodField()
+    chatRoomId = serializers.SerializerMethodField()
+    maxParticipants = serializers.IntegerField(source='max_participants', read_only=True)
 
     class Meta:
         model = StudySession
         fields = [
             'id', 'title', 'subject', 'description', 'location', 'sessionFormat',
-            'date', 'time', 'duration', 'duration_minutes', 'max_participants',
+            'date', 'time', 'duration', 'duration_minutes', 'max_participants', 'maxParticipants',
             'status', 'participants', 'organizer', 'participantCount',
-            'myInviteStatus', 'isOrganizer', 'videoRoomUrl',
+            'myInviteStatus', 'isOrganizer', 'videoRoomUrl', 'chatRoomId',
             'recurrence', 'recurrenceCount', 'startedAt', 'endedAt', 'actualDuration',
             'scheduled_at', 'created_at', 'updated_at',
         ]
 
     def get_sessionFormat(self, obj):
         return 'in_person' if obj.location else 'online'
+
+    def get_chatRoomId(self, obj):
+        try:
+            return obj.chat_room.id
+        except Exception:
+            return None
 
     def get_date(self, obj):
         return obj.scheduled_at.date().isoformat()
@@ -130,14 +138,11 @@ class StudySessionCreateSerializer(serializers.Serializer):
         default='none',
     )
     recurrenceCount = serializers.IntegerField(required=False, default=0, min_value=0, max_value=12)
+    agenda = serializers.JSONField(required=False, default=dict)
 
     def validate(self, attrs):
-        session_format = attrs.pop('sessionFormat', 'online')
-        if session_format == 'online':
-            attrs['location'] = ''
-        elif not attrs.get('location', '').strip():
-            raise serializers.ValidationError({'location': 'Add a meeting place for in-person sessions.'})
-
+        attrs.pop('sessionFormat', 'online')
+        attrs['location'] = ''
         scheduled_at = datetime.combine(attrs['date'], attrs['time'])
         if timezone.is_naive(scheduled_at):
             scheduled_at = timezone.make_aware(scheduled_at)
@@ -168,6 +173,7 @@ class StudySessionCreateSerializer(serializers.Serializer):
         subject = validated_data.pop('subject')
         recurrence = validated_data.pop('recurrence', 'none')
         recurrence_count = validated_data.pop('recurrenceCount', 0)
+        agenda_data = validated_data.pop('agenda', {}) or {}
         buddy_ids = self._get_buddy_ids(request.user)
 
         session = StudySession.objects.create(
@@ -220,6 +226,18 @@ class StudySessionCreateSerializer(serializers.Serializer):
         session.video_room_url = create_video_room(session)
         session.save(update_fields=['video_room_url'])
 
+        if agenda_data:
+            from .models import SessionAgenda
+            SessionAgenda.objects.create(
+                session=session,
+                topics=agenda_data.get('topics', []),
+                past_paper_ref=agenda_data.get('pastPaperRef', ''),
+                checklist=agenda_data.get('checklist', []),
+                pre_read_notes=agenda_data.get('preReadNotes', ''),
+                session_goal=agenda_data.get('sessionGoal', ''),
+                template_id=agenda_data.get('templateId', ''),
+            )
+
         self._create_recurring_sessions(
             session,
             {'recurrence': recurrence, 'recurrenceCount': recurrence_count},
@@ -231,6 +249,12 @@ class StudySessionCreateSerializer(serializers.Serializer):
         try:
             from .session_chat import notify_session_planned
             notify_session_planned(request.user, session, invited_added)
+        except Exception:
+            pass
+
+        try:
+            from chat.group_chat import ensure_session_chat_room, post_session_planned_to_room
+            post_session_planned_to_room(session)
         except Exception:
             pass
 

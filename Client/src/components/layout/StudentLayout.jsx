@@ -4,7 +4,7 @@ import {
   FiHome, FiUsers, FiMessageSquare, FiCalendar, 
   FiBarChart2, FiSettings, FiLogOut, FiMenu, 
   FiBell, FiUser, FiClock, FiEdit3, FiChevronDown,
-  FiAlertCircle, FiSun, FiMoon
+  FiAlertCircle, FiSun, FiMoon, FiBook
 } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -79,6 +79,7 @@ const StudentLayout = ({ children }) => {
     { path: '/requests', icon: <FiUser />, label: 'Requests' },
     { path: '/chat', icon: <FiMessageSquare />, label: 'Messages' },
     { path: '/sessions', icon: <FiCalendar />, label: 'Sessions' },
+    { path: '/vault', icon: <FiBook />, label: 'Subject Vault' },
     { path: '/availability', icon: <FiClock />, label: 'Availability' },
     { path: '/analytics', icon: <FiBarChart2 />, label: 'Analytics' },
     { path: '/report', icon: <FiAlertCircle />, label: 'Report User' },

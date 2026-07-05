@@ -1,5 +1,19 @@
 import api from './api';
 
+const formatAuthError = (error) => {
+  const data = error?.response?.data;
+  if (!data) return error?.message || 'Request failed';
+  if (typeof data === 'string') return data;
+  if (data.error) return data.error;
+  if (data.detail) return data.detail;
+  const parts = [];
+  Object.entries(data).forEach(([field, messages]) => {
+    const list = Array.isArray(messages) ? messages : [messages];
+    list.forEach((msg) => parts.push(typeof msg === 'string' ? msg : String(msg)));
+  });
+  return parts.join(' ') || 'Request failed';
+};
+
 const authService = {
   register: async (userData) => {
     try {
@@ -17,7 +31,8 @@ const authService = {
       }
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
+      const formatted = formatAuthError(error);
+      throw { ...error.response?.data, message: formatted, formatted };
     }
   },
 
@@ -73,6 +88,18 @@ const authService = {
     const response = await api.post('/auth/avatar', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+    localStorage.setItem('user', JSON.stringify(response.data));
+    return response.data;
+  },
+
+  verifySchoolEmail: async (schoolEmail) => {
+    const response = await api.post('/auth/verify-school', { schoolEmail });
+    localStorage.setItem('user', JSON.stringify(response.data.user));
+    return response.data;
+  },
+
+  updateLocale: async (locale) => {
+    const response = await api.put('/auth/profile', { locale });
     localStorage.setItem('user', JSON.stringify(response.data));
     return response.data;
   },

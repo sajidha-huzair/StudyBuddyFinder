@@ -189,6 +189,9 @@ const matchService = {
     if (filters.minCompatibility) params.append('minCompatibility', filters.minCompatibility);
     if (filters.learningStyle) params.append('learningStyle', filters.learningStyle);
     if (filters.sort) params.append('sort', filters.sort);
+    if (filters.matchType) params.append('matchType', filters.matchType);
+    if (filters.district) params.append('district', filters.district);
+    if (filters.medium) params.append('medium', filters.medium);
 
     const response = await api.get(`/matches/recommendations/?${params.toString()}`);
     return response.data;
@@ -203,6 +206,9 @@ const matchService = {
     if (filters.minCompatibility) params.append('minCompatibility', filters.minCompatibility);
     if (filters.learningStyle) params.append('learningStyle', filters.learningStyle);
     if (filters.sort) params.append('sort', filters.sort);
+    if (filters.matchType) params.append('matchType', filters.matchType);
+    if (filters.district) params.append('district', filters.district);
+    if (filters.medium) params.append('medium', filters.medium);
 
     const response = await api.get(`/matches/bookmarks/?${params.toString()}`);
     return response.data.bookmarks || [];

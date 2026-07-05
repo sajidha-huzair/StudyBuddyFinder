@@ -15,4 +15,6 @@ urlpatterns = [
     path('blocked', views.list_blocked_users, name='list-blocked'),
     path('block/<int:user_id>', views.block_user, name='block-user'),
     path('block/<int:user_id>/unblock', views.unblock_user, name='unblock-user'),
+    path('curriculum', views.curriculum_config, name='curriculum-config'),
+    path('verify-school', views.verify_school_email, name='verify-school'),
 ]

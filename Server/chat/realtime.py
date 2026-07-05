@@ -32,3 +32,10 @@ def push_event(recipient_id, payload):
             'message': payload,
         },
     )
+
+
+def push_room_message(user_id, room_id, message_data):
+    push_event(user_id, {
+        'type': 'room_message',
+        'data': {'roomId': room_id, 'message': message_data},
+    })

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { FiPlus, FiX, FiUsers, FiVideo, FiMapPin } from 'react-icons/fi';
+import { FiPlus, FiX, FiUsers, FiVideo } from 'react-icons/fi';
 import sessionService from '../../services/sessionService';
 import matchService from '../../services/matchService';
-import { SUBJECTS } from '../../constants/subjects';
+import { flattenSubjects, PAST_PAPER_TEMPLATES } from '../../constants/curriculum/sl';
+import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-toastify';
 
 const EMPTY_FORM = {
@@ -11,12 +12,15 @@ const EMPTY_FORM = {
   date: '',
   time: '',
   duration: '60',
-  sessionFormat: 'online',
-  location: '',
   description: '',
   invitedBuddies: [],
   recurrence: 'none',
   recurrenceCount: '0',
+  templateId: '',
+  sessionGoal: '',
+  pastPaperRef: '',
+  topics: '',
+  checklist: '',
 };
 
 const CreateSessionModal = ({
@@ -24,12 +28,15 @@ const CreateSessionModal = ({
   onClose,
   onCreated,
   initialBuddyIds = [],
-  title = 'Plan study session',
+  title = 'Plan online study session',
 }) => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({ ...EMPTY_FORM, invitedBuddies: initialBuddyIds });
   const [studyBuddies, setStudyBuddies] = useState([]);
   const [availabilityConflicts, setAvailabilityConflicts] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+
+  const userSubjects = flattenSubjects(user) || [];
 
   useEffect(() => {
     if (!open) return;
@@ -57,21 +64,50 @@ const CreateSessionModal = ({
     check();
   }, [formData.date, formData.time, formData.invitedBuddies, open]);
 
-  const toggleBuddySelection = (buddyId) => {
-    setFormData(prev => ({
+  const applyTemplate = (template) => {
+    setFormData((prev) => ({
       ...prev,
-      invitedBuddies: prev.invitedBuddies.includes(buddyId)
-        ? prev.invitedBuddies.filter(id => id !== buddyId)
-        : [...prev.invitedBuddies, buddyId],
+      templateId: template.id,
+      title: template.label,
+      subject: template.subject,
+      sessionGoal: `Complete ${template.label} together`,
+      pastPaperRef: template.label,
     }));
+  };
+
+  const toggleBuddySelection = (buddyId) => {
+    setFormData((prev) => {
+      const already = prev.invitedBuddies.includes(buddyId);
+      if (!already && prev.invitedBuddies.length >= 4) {
+        toast.info('Maximum 5 participants per session (including you)');
+        return prev;
+      }
+      return {
+        ...prev,
+        invitedBuddies: already
+          ? prev.invitedBuddies.filter((id) => id !== buddyId)
+          : [...prev.invitedBuddies, buddyId],
+      };
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const session = await sessionService.createSession(formData);
-      toast.success('Study session planned!');
+      const session = await sessionService.createSession({
+        ...formData,
+        sessionFormat: 'online',
+        agenda: {
+          templateId: formData.templateId,
+          sessionGoal: formData.sessionGoal,
+          pastPaperRef: formData.pastPaperRef,
+          topics: formData.topics.split(',').map((t) => t.trim()).filter(Boolean),
+          checklist: formData.checklist.split('\n').map((t) => t.trim()).filter(Boolean),
+          preReadNotes: formData.description,
+        },
+      });
+      toast.success('Online study session planned!');
       onCreated?.(session);
       onClose();
     } catch (error) {
@@ -83,22 +119,41 @@ const CreateSessionModal = ({
 
   if (!open) return null;
 
+  const templates = PAST_PAPER_TEMPLATES.filter(
+    (t) => !user?.gradeBand || t.gradeBand === user.gradeBand,
+  );
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content create-session-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
             <h2>{title}</h2>
-            <p className="text-muted">Invited buddies get a session invite in chat and under Study Sessions</p>
+            <p className="text-muted"><FiVideo style={{ verticalAlign: 'middle' }} /> Online video session in the app</p>
           </div>
           <button type="button" className="close-btn" onClick={onClose} aria-label="Close"><FiX /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="create-session-form">
+          {templates.length > 0 && (
+            <div className="form-group">
+              <label>Quick template (optional)</label>
+              <div className="template-chips">
+                {templates.map((t) => (
+                  <button key={t.id} type="button"
+                    className={`chip ${formData.templateId === t.id ? 'active' : ''}`}
+                    onClick={() => applyTemplate(t)}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="form-group">
             <label>Session title *</label>
             <input type="text" value={formData.title} required className="input-field"
-              placeholder="e.g., Calculus Problem Solving"
+              placeholder="e.g., O/L Maths Past Paper 2023"
               onChange={(e) => setFormData({ ...formData, title: e.target.value })} />
           </div>
 
@@ -108,7 +163,9 @@ const CreateSessionModal = ({
               <select value={formData.subject} required className="input-field"
                 onChange={(e) => setFormData({ ...formData, subject: e.target.value })}>
                 <option value="">Select subject</option>
-                {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                {(userSubjects.length ? userSubjects : ['Mathematics', 'Science', 'English']).map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
               </select>
             </div>
             <div className="form-group">
@@ -138,82 +195,59 @@ const CreateSessionModal = ({
           </div>
 
           <div className="form-group">
-            <label>How you&apos;ll meet</label>
-            <div className="session-format-toggle">
-              <button
-                type="button"
-                className={`format-option ${formData.sessionFormat === 'online' ? 'active' : ''}`}
-                onClick={() => setFormData({ ...formData, sessionFormat: 'online', location: '' })}
-              >
-                <FiVideo /> Online (video in app)
-              </button>
-              <button
-                type="button"
-                className={`format-option ${formData.sessionFormat === 'in_person' ? 'active' : ''}`}
-                onClick={() => setFormData({ ...formData, sessionFormat: 'in_person' })}
-              >
-                <FiMapPin /> In person
-              </button>
-            </div>
-            {formData.sessionFormat === 'online' ? (
-              <p className="field-hint">Join video from the session page when it&apos;s time — no link needed.</p>
-            ) : (
-              <input
-                type="text"
-                className="input-field"
-                placeholder="e.g., Main library, 2nd floor"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              />
-            )}
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Repeat</label>
-              <select value={formData.recurrence} className="input-field"
-                onChange={(e) => setFormData({ ...formData, recurrence: e.target.value })}>
-                <option value="none">One-time</option>
-                <option value="weekly">Weekly</option>
-                <option value="biweekly">Every 2 weeks</option>
-              </select>
-            </div>
-            {formData.recurrence !== 'none' && (
-              <div className="form-group">
-                <label>Extra sessions</label>
-                <select value={formData.recurrenceCount} className="input-field"
-                  onChange={(e) => setFormData({ ...formData, recurrenceCount: e.target.value })}>
-                  {[1, 2, 3, 4, 5, 6, 8, 10, 12].map(n => (
-                    <option key={n} value={n}>{n} more</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <label>Session goal</label>
+            <input type="text" className="input-field" value={formData.sessionGoal}
+              placeholder="e.g., Finish Paper I MCQs and discuss Q5"
+              onChange={(e) => setFormData({ ...formData, sessionGoal: e.target.value })} />
           </div>
 
           <div className="form-group">
-            <label>Description</label>
+            <label>Past paper reference</label>
+            <input type="text" className="input-field" value={formData.pastPaperRef}
+              placeholder="e.g., 2022 O/L Mathematics Paper I"
+              onChange={(e) => setFormData({ ...formData, pastPaperRef: e.target.value })} />
+          </div>
+
+          <div className="form-group">
+            <label>Topics (comma-separated)</label>
+            <input type="text" className="input-field" value={formData.topics}
+              placeholder="Algebra, Quadratic equations"
+              onChange={(e) => setFormData({ ...formData, topics: e.target.value })} />
+          </div>
+
+          <div className="form-group">
+            <label>Pre-session checklist (one per line)</label>
+            <textarea className="input-field" rows={2} value={formData.checklist}
+              placeholder={'Bring calculator\nDownload past paper PDF'}
+              onChange={(e) => setFormData({ ...formData, checklist: e.target.value })} />
+          </div>
+
+          <div className="form-group">
+            <label>Notes for buddies</label>
             <textarea value={formData.description} rows={2} className="input-field"
-              placeholder="What will you cover?"
+              placeholder="What should buddies prepare?"
               onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
           </div>
 
           <div className="form-group">
             <label><FiUsers style={{ marginRight: '8px' }} />Invite buddies ({formData.invitedBuddies.length})</label>
+            <p className="text-muted" style={{ marginBottom: '0.5rem', fontSize: '0.85rem' }}>
+              Up to 5 people total per session (including you). You have selected {formData.invitedBuddies.length + 1}.
+            </p>
+            {formData.invitedBuddies.length >= 4 && (
+              <p className="text-muted" style={{ marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--warning, #b45309)' }}>
+                Maximum reached — remove a buddy to invite someone else.
+              </p>
+            )}
             {studyBuddies.length === 0 ? (
               <p className="text-muted">Connect with study buddies first to invite them.</p>
             ) : (
               <div className="buddy-selection-grid">
-                {studyBuddies.map(buddy => (
-                  <div
-                    key={buddy.id}
-                    type="button"
-                    role="button"
-                    tabIndex={0}
+                {studyBuddies.map((buddy) => (
+                  <div key={buddy.id} role="button" tabIndex={0}
                     className={`buddy-selection-card ${formData.invitedBuddies.includes(buddy.id) ? 'selected' : ''}`}
                     onClick={() => toggleBuddySelection(buddy.id)}
-                    onKeyDown={(e) => e.key === 'Enter' && toggleBuddySelection(buddy.id)}
-                  >
+                    onKeyDown={(ev) => ev.key === 'Enter' && toggleBuddySelection(buddy.id)}>
                     <div className="buddy-avatar">{buddy.name.charAt(0)}</div>
                     <div className="buddy-info"><div className="buddy-name">{buddy.name}</div></div>
                   </div>
@@ -224,7 +258,7 @@ const CreateSessionModal = ({
 
           {availabilityConflicts.length > 0 && (
             <div className="availability-warning">
-              ⚠️ {availabilityConflicts.map(c => c.name).join(', ')} may not be available at this time.
+              ⚠️ {availabilityConflicts.map((c) => c.name).join(', ')} may not be available at this time.
             </div>
           )}
 

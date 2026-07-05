@@ -1,13 +1,3 @@
-export const SUBJECTS = [
-  'Mathematics',
-  'Physics',
-  'Chemistry',
-  'Biology',
-  'Computer Science',
-  'English',
-  'History',
-  'Economics',
-  'Information Technology',
-];
-
-export default SUBJECTS;
+/** @deprecated Use constants/curriculum/sl.js */
+export { flattenSubjects as default } from './curriculum/sl';
+export * from './curriculum/sl';

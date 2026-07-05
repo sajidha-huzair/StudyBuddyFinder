@@ -280,3 +280,37 @@ def unblock_user(request, user_id):
     if not deleted:
         return Response({'error': 'User is not blocked'}, status=status.HTTP_404_NOT_FOUND)
     return Response({'success': True, 'message': 'User unblocked'})
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def curriculum_config(request):
+    from . import curriculum
+    return Response({
+        'gradeBands': curriculum.GRADE_BANDS,
+        'juniorSubjects': curriculum.JUNIOR_SUBJECTS,
+        'olCompulsory': curriculum.OL_COMPULSORY,
+        'olOptionalBaskets': curriculum.OL_OPTIONAL_BASKETS,
+        'alStreams': curriculum.AL_STREAMS,
+        'alCommon': curriculum.AL_COMMON,
+        'mediums': curriculum.MEDIUMS,
+        'districts': curriculum.DISTRICTS,
+        'studyGoals': curriculum.STUDY_GOALS,
+        'learningStyles': curriculum.LEARNING_STYLES,
+        'pastPaperTemplates': curriculum.PAST_PAPER_TEMPLATES,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def verify_school_email(request):
+    from .school_verify import verify_school_email as do_verify
+    school_email = request.data.get('schoolEmail') or request.data.get('email')
+    ok, message = do_verify(request.user, school_email)
+    if not ok:
+        return Response({'error': message}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({
+        'success': True,
+        'message': message,
+        'user': UserSerializer(request.user, context={'request': request}).data,
+    })

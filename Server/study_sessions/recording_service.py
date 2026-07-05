@@ -1,6 +1,6 @@
 import json
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 
 from django.db import close_old_connections
 from django.utils import timezone
@@ -145,7 +145,7 @@ def _recording_from_daily_row(session, row):
 
     start_ts = row.get('start_ts')
     duration = int(row.get('duration') or 0)
-    started_at = datetime.fromtimestamp(start_ts, tz=timezone.utc) if start_ts else session.started_at
+    started_at = datetime.fromtimestamp(start_ts, tz=dt_timezone.utc) if start_ts else session.started_at
     ended_at = started_at + timedelta(seconds=duration) if started_at and duration else session.ended_at
 
     download_url = fetch_recording_download_url(recording_id) or ''
@@ -192,7 +192,7 @@ def upsert_recording_from_webhook(payload):
 
     start_ts = data.get('start_ts')
     duration = int(data.get('duration') or 0)
-    started_at = datetime.fromtimestamp(start_ts, tz=timezone.utc) if start_ts else session.started_at
+    started_at = datetime.fromtimestamp(start_ts, tz=dt_timezone.utc) if start_ts else session.started_at
     ended_at = None
     if started_at and duration:
         ended_at = started_at + timedelta(seconds=duration)

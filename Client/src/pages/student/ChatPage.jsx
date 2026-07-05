@@ -2,13 +2,15 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   FiSend, FiSlash, FiAlertCircle, FiUserCheck, FiMoreVertical,
-  FiArrowLeft, FiCalendar, FiPaperclip,
+  FiCalendar, FiPaperclip, FiInfo,
 } from 'react-icons/fi';
 import matchService from '../../services/matchService';
 import chatService from '../../services/chatService';
 import blockService from '../../services/blockService';
 import useChatSocket from '../../hooks/useChatSocket';
 import ChatMessage from '../../components/chat/ChatMessage';
+import ChatSidebar from '../../components/chat/ChatSidebar';
+import ChatInfoDrawer from '../../components/chat/ChatInfoDrawer';
 import UserAvatar from '../../components/common/UserAvatar';
 import VerifiedBadge from '../../components/common/VerifiedBadge';
 import CreateSessionModal from '../../components/sessions/CreateSessionModal';
@@ -29,6 +31,8 @@ const ChatPage = () => {
   const [buddyTyping, setBuddyTyping] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [sessionRooms, setSessionRooms] = useState([]);
+  const [showInfo, setShowInfo] = useState(false);
   const messagesEndRef = useRef(null);
   const menuRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -51,10 +55,12 @@ const ChatPage = () => {
 
   const loadBuddies = useCallback(async () => {
     try {
-      const [conversations, studyBuddies] = await Promise.all([
+      const [conversations, studyBuddies, rooms] = await Promise.all([
         chatService.getConversations().catch(() => []),
         matchService.getStudyBuddies().catch(() => []),
+        chatService.getChatRooms().catch(() => []),
       ]);
+      setSessionRooms(rooms);
       const conversationMap = new Map(conversations.map(c => [c.id, c]));
       const merged = studyBuddies.map(buddy => ({
         ...buddy,
@@ -251,11 +257,6 @@ const ChatPage = () => {
     navigate(`/chat/${buddy.id}`);
   };
 
-  const handleBackToList = () => {
-    setSelectedBuddy(null);
-    navigate('/chat');
-  };
-
   const handleReport = () => {
     setMenuOpen(false);
     navigate(`/report?userId=${selectedBuddy.id}&name=${encodeURIComponent(selectedBuddy.name)}`);
@@ -266,75 +267,31 @@ const ChatPage = () => {
   const buddyIsVerified = selectedBuddy?.isVerified ?? selectedBuddy?.is_verified;
 
   return (
-    <div className={`chat-page page-container ${buddyId || selectedBuddy ? 'show-conversation' : ''}`}>
-      <div className="chat-sidebar card">
-        <div className="chat-sidebar-header">
-          <h3>Messages</h3>
-          <p className="text-muted">Chat with your study buddies</p>
-        </div>
-        <div className="buddy-list">
-          {buddies.length === 0 && blockedUsers.length === 0 ? (
-            <p className="empty-state" style={{ padding: '1rem' }}>Accept a study buddy request to start chatting.</p>
-          ) : (
-            <>
-              {buddies.map(buddy => (
-                <div
-                  key={buddy.id}
-                  className={`buddy-item ${selectedBuddy?.id === buddy.id ? 'active' : ''}`}
-                  onClick={() => selectBuddy(buddy)}
-                >
-                  <UserAvatar user={buddy} name={buddy.name} size={40} />
-                  <div className="buddy-info">
-                    <h4>{buddy.name}</h4>
-                    <p className="last-message">{buddy.lastMessage}</p>
-                  </div>
-                  {buddy.unreadCount > 0 && (
-                    <span className="badge badge-primary">{buddy.unreadCount}</span>
-                  )}
-                </div>
-              ))}
-              {blockedUsers.length > 0 && (
-                <>
-                  <p className="text-muted blocked-list-label">BLOCKED</p>
-                  {blockedUsers.map(buddy => (
-                    <div
-                      key={`blocked-${buddy.id}`}
-                      className={`buddy-item blocked ${selectedBuddy?.id === buddy.id ? 'active' : ''}`}
-                      onClick={() => selectBuddy(buddy)}
-                    >
-                      <UserAvatar user={buddy} name={buddy.name} size={40} />
-                      <div className="buddy-info">
-                        <h4>{buddy.name}</h4>
-                        <p className="last-message">Blocked</p>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-            </>
-          )}
-        </div>
-      </div>
+    <div className={`chat-page ${buddyId || selectedBuddy ? 'show-conversation' : ''}`}>
+      <ChatSidebar
+        buddies={buddies}
+        sessionRooms={sessionRooms}
+        blockedUsers={blockedUsers}
+        activeBuddyId={selectedBuddy?.id}
+        onSelectBuddy={selectBuddy}
+      />
 
       <div className="chat-main card">
         {selectedBuddy ? (
           <>
             <div className="chat-header flex-between">
-              <div className="chat-header-profile">
-                <button type="button" className="chat-back-btn" onClick={handleBackToList} aria-label="Back to conversations">
-                  <FiArrowLeft />
-                </button>
-                <UserAvatar user={selectedBuddy} name={selectedBuddy.name} size={40} />
-                <div>
-                  <h3>
+              <button type="button" className="chat-header-profile chat-header-clickable" onClick={() => setShowInfo(true)}>
+                <UserAvatar user={selectedBuddy} name={selectedBuddy.name} size={36} />
+                <div className="chat-header-title-wrap">
+                  <span className="chat-conversation-title">
                     {selectedBuddy.name}
                     <VerifiedBadge show={buddyIsVerified} />
-                  </h3>
+                  </span>
                   <span className="chat-status">
                     {isBlocked ? 'Blocked' : buddyTyping ? 'Typing…' : 'Study buddy'}
                   </span>
                 </div>
-              </div>
+              </button>
               <div className="chat-header-right">
                 <div className="chat-header-actions">
                   {!isBlocked && (
@@ -342,6 +299,9 @@ const ChatPage = () => {
                       <FiCalendar /> Plan session
                     </button>
                   )}
+                  <button type="button" className="chat-menu-btn" onClick={() => setShowInfo(true)} aria-label="Chat info">
+                    <FiInfo />
+                  </button>
                 </div>
                 <div className="chat-menu-wrapper" ref={menuRef}>
                   <button type="button" className="chat-menu-btn" onClick={() => setMenuOpen(!menuOpen)} aria-label="Chat options" aria-expanded={menuOpen}>
@@ -428,6 +388,13 @@ const ChatPage = () => {
         onCreated={handleSessionPlanned}
         initialBuddyIds={selectedBuddy ? [selectedBuddy.id] : []}
         title="Plan session"
+      />
+
+      <ChatInfoDrawer
+        open={showInfo && Boolean(selectedBuddy)}
+        onClose={() => setShowInfo(false)}
+        mode="buddy"
+        buddy={selectedBuddy}
       />
     </div>
   );

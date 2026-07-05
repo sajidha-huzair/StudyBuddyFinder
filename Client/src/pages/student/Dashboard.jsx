@@ -8,6 +8,7 @@ import analyticsService from '../../services/analyticsService';
 import VerifiedBadge from '../../components/common/VerifiedBadge';
 import UserAvatar from '../../components/common/UserAvatar';
 import { getProfileCompleteness, shouldShowSemesterRefresh } from '../../utils/profileCompleteness';
+import { getExamCountdown, flattenSubjects, GRADE_BANDS } from '../../constants/curriculum/sl';
 import './Dashboard.css';
 
 const SEMESTER_DISMISS_KEY = 'semesterRefreshDismissed';
@@ -26,6 +27,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   const profileCompleteness = getProfileCompleteness(user);
+  const examCountdown = getExamCountdown(user?.examYear, user?.gradeBand);
+  const displaySubjects = flattenSubjects(user);
 
   useEffect(() => {
     const dismissed = localStorage.getItem(SEMESTER_DISMISS_KEY);
@@ -88,11 +91,19 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {examCountdown && user?.gradeBand !== 'JUNIOR' && (
+        <div className="exam-countdown-banner card">
+          <strong>{examCountdown.days} days</strong>
+          <span> until {examCountdown.label} exam ({user.examYear})</span>
+          <Link to="/matches" className="btn btn-primary btn-sm">Find study buddies</Link>
+        </div>
+      )}
+
       {showSemesterBanner && (
         <div className="semester-refresh-banner card">
           <div>
-            <strong>New semester?</strong>
-            <p>Update your year, subjects, and availability so matches stay accurate.</p>
+            <strong>New term?</strong>
+            <p>Update your grade, subjects, and availability so matches stay accurate.</p>
           </div>
           <div className="semester-banner-actions">
             <Link to="/profile/edit" className="btn btn-primary btn-sm">Update profile</Link>
@@ -172,17 +183,25 @@ const Dashboard = () => {
             <span>{user?.educationLevel || 'Not set'}</span>
           </div>
           <div className="profile-summary-item">
-            <span className="profile-label">Institution</span>
-            <span>{user?.university || '—'}</span>
+            <span className="profile-label">School</span>
+            <span>{user?.school || user?.university || '—'}</span>
+          </div>
+          <div className="profile-summary-item">
+            <span className="profile-label">Grade</span>
+            <span>{user?.grade ? `Grade ${user.grade}` : '—'} {user?.gradeBand ? `(${GRADE_BANDS[user.gradeBand]?.label || ''})` : ''}</span>
+          </div>
+          <div className="profile-summary-item">
+            <span className="profile-label">Medium</span>
+            <span>{user?.medium || '—'}</span>
           </div>
           <div className="profile-summary-item">
             <span className="profile-label">Learning style</span>
-            <span>{user?.learningStyle || '—'}</span>
+            <span>{user?.learningStyles?.length ? user.learningStyles.join(', ') : (user?.learningStyle || '—')}</span>
           </div>
           <div className="profile-summary-item full-width">
             <span className="profile-label">Subjects</span>
             <div className="tag-list">
-              {(user?.subjects?.length > 0 ? user.subjects : ['None selected']).map(s => (
+              {(displaySubjects.length > 0 ? displaySubjects : ['None selected']).map(s => (
                 <span key={s} className="badge badge-primary">{s}</span>
               ))}
             </div>

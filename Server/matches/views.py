@@ -103,6 +103,11 @@ class MatchViewSet(viewsets.ModelViewSet):
         min_score = float(request.query_params.get('minCompatibility', 0))
         learning_style = request.query_params.get('learningStyle', '')
         sort = request.query_params.get('sort', 'compatibility')
+        match_type = request.query_params.get('matchType', 'all')
+        grade_band = request.query_params.get('gradeBand', '')
+        stream = request.query_params.get('stream', '')
+        district = request.query_params.get('district', '')
+        medium = request.query_params.get('medium', '')
 
         results = get_recommendations(
             request.user,
@@ -113,6 +118,11 @@ class MatchViewSet(viewsets.ModelViewSet):
             min_score=min_score,
             learning_style=learning_style or None,
             sort=sort or 'compatibility',
+            match_type=match_type or 'all',
+            grade_band=grade_band or None,
+            stream=stream or None,
+            district=district or None,
+            medium=medium or None,
         )
         serializer = RecommendationSerializer(results, many=True, context={'request': request})
         return Response(serializer.data)
@@ -141,6 +151,11 @@ class MatchViewSet(viewsets.ModelViewSet):
         min_score = float(request.query_params.get('minCompatibility', 0))
         learning_style = request.query_params.get('learningStyle', '')
         sort = request.query_params.get('sort', 'compatibility')
+        match_type = request.query_params.get('matchType', 'all')
+        grade_band = request.query_params.get('gradeBand', '')
+        stream = request.query_params.get('stream', '')
+        district = request.query_params.get('district', '')
+        medium = request.query_params.get('medium', '')
 
         results = get_bookmarked_recommendations(
             request.user,
@@ -151,6 +166,11 @@ class MatchViewSet(viewsets.ModelViewSet):
             min_score=min_score,
             learning_style=learning_style or None,
             sort=sort or 'compatibility',
+            match_type=match_type or 'all',
+            grade_band=grade_band or None,
+            stream=stream or None,
+            district=district or None,
+            medium=medium or None,
         )
         serializer = RecommendationSerializer(results, many=True, context={'request': request})
         return Response({

@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { FiStar, FiFilter, FiSearch, FiChevronRight, FiClock, FiBookmark } from 'react-icons/fi';
+import { useAuth } from '../../contexts/AuthContext';
 import matchService from '../../services/matchService';
 import BuddyDetailModal from '../../components/matches/BuddyDetailModal';
 import VerifiedBadge from '../../components/common/VerifiedBadge';
-import { SUBJECTS } from '../../constants/subjects';
+import { flattenSubjects, MATCH_TYPES, DISTRICTS, MEDIUMS, LEARNING_STYLES as CURRICULUM_STYLES } from '../../constants/curriculum/sl';
 import { toast } from 'react-toastify';
 import './MatchRecommendations.css';
 
-const LEARNING_STYLES = ['', 'Visual', 'Auditory', 'Reading/Writing', 'Kinesthetic'];
+const LEARNING_STYLES = ['', ...CURRICULUM_STYLES];
 const SORT_OPTIONS = [
   { value: 'compatibility', label: 'Best match' },
+  { value: 'availability', label: 'Most free time overlap' },
   { value: 'name', label: 'Name (A–Z)' },
   { value: 'active', label: 'Recently active' },
 ];
@@ -20,19 +22,21 @@ const ACTIVITY_LABELS = {
   inactive: 'Not recently active',
 };
 
-const EDUCATION_LEVELS = ['', 'GCE O/L', 'GCE A/L', 'University'];
-
 const MatchRecommendations = () => {
+  const { user } = useAuth();
+  const subjectOptions = flattenSubjects(user);
   const [matches, setMatches] = useState([]);
   const [viewMode, setViewMode] = useState('all');
   const [filters, setFilters] = useState({
     subject: '',
-    educationLevel: '',
-    university: '',
     search: '',
     minCompatibility: 15,
     learningStyle: '',
     sort: 'compatibility',
+    matchType: 'all',
+    district: '',
+    medium: '',
+    university: '',
   });
   const [loading, setLoading] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState(null);
@@ -106,7 +110,20 @@ const MatchRecommendations = () => {
     <div className="match-recommendations">
       <div className="page-header">
         <h1>Find Study Buddies</h1>
-        <p>Discover students with complementary skills and interests</p>
+        <p>Matched to your grade, stream, and subjects — online study partners only</p>
+      </div>
+
+      <div className="match-type-tabs">
+        {MATCH_TYPES.map((mt) => (
+          <button
+            key={mt.value}
+            type="button"
+            className={`view-tab ${filters.matchType === mt.value ? 'active' : ''}`}
+            onClick={() => setFilters({ ...filters, matchType: mt.value })}
+          >
+            {mt.label}
+          </button>
+        ))}
       </div>
 
       <div className="match-view-tabs">
@@ -141,19 +158,28 @@ const MatchRecommendations = () => {
           onChange={(e) => setFilters({ ...filters, subject: e.target.value })}
         >
           <option value="">All subjects</option>
-          {SUBJECTS.map((s) => (
+          {subjectOptions.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
         <select
           className="input-field"
-          value={filters.educationLevel}
-          onChange={(e) => setFilters({ ...filters, educationLevel: e.target.value })}
+          value={filters.medium}
+          onChange={(e) => setFilters({ ...filters, medium: e.target.value })}
         >
-          {EDUCATION_LEVELS.map((level) => (
-            <option key={level || 'all'} value={level}>
-              {level || 'All education levels'}
-            </option>
+          <option value="">All mediums</option>
+          {MEDIUMS.map((m) => (
+            <option key={m} value={m}>{m}</option>
+          ))}
+        </select>
+        <select
+          className="input-field"
+          value={filters.district}
+          onChange={(e) => setFilters({ ...filters, district: e.target.value })}
+        >
+          <option value="">All districts</option>
+          {DISTRICTS.map((d) => (
+            <option key={d} value={d}>{d}</option>
           ))}
         </select>
         <select
@@ -254,7 +280,7 @@ const MatchRecommendations = () => {
                 </h3>
 
                 <p className="match-meta">
-                  {[match.educationLevel, match.university].filter(Boolean).join(' · ') || 'Student'}
+                  {[match.grade ? `Grade ${match.grade}` : null, match.school || match.university, match.medium].filter(Boolean).join(' · ') || 'Student'}
                 </p>
 
                 {previewSubjects.length > 0 && (

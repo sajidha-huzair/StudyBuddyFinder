@@ -272,6 +272,11 @@ a:hover {
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
+.input-field-sm {
+  padding: 0.45rem 0.65rem;
+  font-size: var(--font-size-sm);
+}
+
 .input-error {
   border-color: var(--error);
 }

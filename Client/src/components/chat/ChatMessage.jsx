@@ -1,6 +1,8 @@
 import React from 'react';
 import { FiPaperclip, FiVideo, FiCalendar, FiCheck, FiBookmark, FiMapPin } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import { openSessionFromChat } from '../../utils/sessionNav';
+import sessionService from '../../services/sessionService';
 
 const formatRange = (meta) => {
   if (!meta?.startedAt) return null;
@@ -25,15 +27,16 @@ const ChatMessage = ({ msg, onPin }) => {
 
   const renderBody = () => {
     if (type === 'FILE') {
+      const fileUrl = msg.attachmentUrl || meta.downloadUrl;
       const isImage = (meta.mimeType || '').startsWith('image/');
       return (
         <div className="message-file">
-          {isImage && msg.attachmentUrl ? (
-            <a href={msg.attachmentUrl} target="_blank" rel="noreferrer">
-              <img src={msg.attachmentUrl} alt={meta.fileName || 'Attachment'} className="message-image" />
+          {isImage && fileUrl ? (
+            <a href={fileUrl} target="_blank" rel="noreferrer">
+              <img src={fileUrl} alt={meta.fileName || 'Attachment'} className="message-image" />
             </a>
           ) : (
-            <a href={msg.attachmentUrl} target="_blank" rel="noreferrer" className="message-file-link">
+            <a href={fileUrl || '#'} target="_blank" rel="noreferrer" className="message-file-link">
               <FiPaperclip /> {meta.fileName || msg.content}
             </a>
           )}
@@ -42,6 +45,7 @@ const ChatMessage = ({ msg, onPin }) => {
     }
 
     if (type === 'RECORDING') {
+      const watchUrl = meta.recordingUrl || meta.downloadUrl;
       return (
         <div className="message-recording card">
           <div className="message-recording-head">
@@ -49,10 +53,19 @@ const ChatMessage = ({ msg, onPin }) => {
             <strong>{meta.sessionTitle || 'Session recording'}</strong>
           </div>
           {formatRange(meta) && <p className="message-recording-time">{formatRange(meta)}</p>}
-          {meta.recordingUrl ? (
-            <a href={meta.recordingUrl} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">
-              Watch recording
-            </a>
+          {watchUrl ? (
+            <>
+              <video
+                src={watchUrl}
+                controls
+                playsInline
+                preload="metadata"
+                className="message-recording-video"
+              />
+              <a href={watchUrl} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">
+                Open in new tab
+              </a>
+            </>
           ) : (
             <p className="text-muted">Recording is processing — check back in a minute…</p>
           )}
@@ -80,7 +93,7 @@ const ChatMessage = ({ msg, onPin }) => {
             )}
           </p>
           {meta.sessionId && (
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => navigate(`/sessions?session=${meta.sessionId}`)}>
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => openSessionFromChat(navigate, meta.sessionId, sessionService)}>
               View session
             </button>
           )}

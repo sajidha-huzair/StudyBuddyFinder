@@ -1,29 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiVideo, FiCheck, FiEdit2, FiSave, FiClock, FiUsers, FiMapPin, FiSlash } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
+import { FiX, FiVideo, FiCheck, FiEdit2, FiSave, FiClock, FiUsers, FiSlash, FiMessageCircle } from 'react-icons/fi';
 import sessionService from '../../services/sessionService';
+import chatService from '../../services/chatService';
+import SessionLifecyclePanel from './SessionLifecyclePanel';
 import { toast } from 'react-toastify';
 
 const SessionDetailModal = ({ session, filter, onClose, onUpdated, onJoinVideo }) => {
+  const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
+  const [chatRoomId, setChatRoomId] = useState(session?.chatRoomId || null);
 
-  const sessionFormat = session?.sessionFormat || (session?.location ? 'in_person' : 'online');
-  const isOnline = sessionFormat === 'online';
+  const sessionFormat = 'online';
+  const isOnline = true;
 
   useEffect(() => {
     if (session) {
-      const format = session.sessionFormat || (session.location ? 'in_person' : 'online');
       setForm({
         title: session.title,
         subject: session.subject,
         date: session.date,
         time: session.time,
         duration: String(session.duration || 60),
-        sessionFormat: format,
-        location: session.location || '',
         description: session.description || '',
       });
       setEditing(false);
+      setChatRoomId(session.chatRoomId || null);
+      if (!session.chatRoomId) {
+        chatService.getChatRoomForSession(session.id)
+          .then((room) => setChatRoomId(room.id))
+          .catch(() => {});
+      }
     }
   }, [session]);
 
@@ -39,10 +47,7 @@ const SessionDetailModal = ({ session, filter, onClose, onUpdated, onJoinVideo }
 
   const handleSave = async () => {
     try {
-      await sessionService.updateSession(session.id, {
-        ...form,
-        location: form.sessionFormat === 'online' ? '' : form.location,
-      });
+      await sessionService.updateSession(session.id, form);
       toast.success('Session updated');
       setEditing(false);
       onUpdated?.();
@@ -93,23 +98,6 @@ const SessionDetailModal = ({ session, filter, onClose, onUpdated, onJoinVideo }
                 </select>
               </div>
               <div className="form-group">
-                <label>How you&apos;ll meet</label>
-                <div className="session-format-toggle">
-                  <button type="button" className={`format-option ${form.sessionFormat === 'online' ? 'active' : ''}`}
-                    onClick={() => setForm({ ...form, sessionFormat: 'online', location: '' })}>
-                    <FiVideo /> Online
-                  </button>
-                  <button type="button" className={`format-option ${form.sessionFormat === 'in_person' ? 'active' : ''}`}
-                    onClick={() => setForm({ ...form, sessionFormat: 'in_person' })}>
-                    <FiMapPin /> In person
-                  </button>
-                </div>
-                {form.sessionFormat === 'in_person' && (
-                  <input className="input-field" value={form.location} placeholder="Meeting place"
-                    onChange={(e) => setForm({ ...form, location: e.target.value })} />
-                )}
-              </div>
-              <div className="form-group">
                 <label>Description</label>
                 <textarea className="input-field" rows={3} value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })} />
@@ -120,13 +108,8 @@ const SessionDetailModal = ({ session, filter, onClose, onUpdated, onJoinVideo }
               <div className="session-detail-grid">
                 <div className="detail-item"><FiClock /> {session.date} at {session.time}</div>
                 <div className="detail-item"><FiClock /> {session.duration} min planned</div>
-                <div className="detail-item">
-                  {isOnline ? <><FiVideo /> Online (video in app)</> : <><FiMapPin /> In person</>}
-                </div>
-                {!isOnline && session.location && (
-                  <div className="detail-item"><FiMapPin /> {session.location}</div>
-                )}
-                <div className="detail-item"><FiUsers /> {session.participantCount} participants</div>
+                <div className="detail-item"><FiVideo /> Online video session</div>
+                <div className="detail-item"><FiUsers /> {session.participantCount} / {session.maxParticipants || session.max_participants || 5} max</div>
               </div>
               {session.organizer && (
                 <p className="text-muted">Organized by <strong>{session.organizer.name}</strong></p>
@@ -151,6 +134,7 @@ const SessionDetailModal = ({ session, filter, onClose, onUpdated, onJoinVideo }
                   ))}
                 </div>
               )}
+              <SessionLifecyclePanel session={session} filter={filter} />
             </>
           )}
         </div>
@@ -169,6 +153,14 @@ const SessionDetailModal = ({ session, filter, onClose, onUpdated, onJoinVideo }
           {filter === 'upcoming' && session.status === 'upcoming' && isOnline && (
             <button className="btn btn-primary btn-sm" onClick={() => onJoinVideo(session)}>
               <FiVideo /> Join Video
+            </button>
+          )}
+          {chatRoomId && (
+            <button className="btn btn-outline btn-sm" onClick={() => {
+              onClose();
+              navigate(`/chat/room/${chatRoomId}`);
+            }}>
+              <FiMessageCircle /> Group chat
             </button>
           )}
           {canEdit && !editing && (

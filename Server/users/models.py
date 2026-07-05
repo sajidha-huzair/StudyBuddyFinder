@@ -48,6 +48,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     major = models.CharField(max_length=100, blank=True, null=True)
     year = models.CharField(max_length=50, blank=True, null=True)
     grade = models.CharField(max_length=20, blank=True, null=True)
+    grade_band = models.CharField(max_length=20, blank=True, null=True)  # JUNIOR, OL, AL
+    stream = models.CharField(max_length=40, blank=True, null=True)  # A/L stream key
+    medium = models.CharField(max_length=20, blank=True, null=True)  # Sinhala, Tamil, English
+    exam_year = models.IntegerField(blank=True, null=True)
+    district = models.CharField(max_length=80, blank=True, null=True)
+    mentor_mode = models.BooleanField(default=False)
+    parent_email = models.EmailField(blank=True, null=True)
+    school_verified = models.BooleanField(default=False)
     courses = models.TextField(default='[]', blank=True)  # stores: subjects, strengths, weaknesses
     study_preferences = models.TextField(default='{}', blank=True)  # stores: learningStyle, studyGoals, etc.
     availability = models.TextField(default='{}', blank=True)

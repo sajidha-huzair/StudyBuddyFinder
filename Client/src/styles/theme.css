@@ -51,6 +51,11 @@
   --hero-bg: linear-gradient(135deg, rgba(74, 124, 111, 0.08) 0%, rgba(196, 165, 116, 0.08) 100%);
   --page-accent-bg: linear-gradient(135deg, rgba(74, 124, 111, 0.06) 0%, rgba(196, 165, 116, 0.06) 100%);
   --message-received-bg: var(--surface-elevated);
+  --chat-sent-bg: #b8ddd4;
+  --chat-sent-text: #2a4840;
+  --chat-proposal-bg: rgba(74, 124, 111, 0.1);
+  --chat-proposal-border: rgba(74, 124, 111, 0.28);
+  --chat-proposal-accent: #6a9d8f;
   --admin-sidebar-bg: linear-gradient(180deg, #2d4038 0%, #3a5248 100%);
   --admin-nav-active: rgba(126, 184, 168, 0.22);
   --admin-avatar-bg: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
@@ -110,6 +115,11 @@
   --hero-bg: linear-gradient(135deg, rgba(126, 184, 168, 0.1) 0%, rgba(212, 184, 150, 0.08) 100%);
   --page-accent-bg: linear-gradient(135deg, rgba(126, 184, 168, 0.08) 0%, rgba(212, 184, 150, 0.06) 100%);
   --message-received-bg: var(--surface-elevated);
+  --chat-sent-bg: #3a5248;
+  --chat-sent-text: #e8f4f0;
+  --chat-proposal-bg: rgba(126, 184, 168, 0.12);
+  --chat-proposal-border: rgba(126, 184, 168, 0.28);
+  --chat-proposal-accent: #9ecec0;
   --admin-sidebar-bg: linear-gradient(180deg, #1a2220 0%, #242c29 100%);
   --admin-nav-active: rgba(126, 184, 168, 0.2);
   --admin-avatar-bg: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary-dark) 100%);

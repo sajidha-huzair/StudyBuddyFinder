@@ -173,10 +173,12 @@ const BuddyDetailModal = ({ buddy, onClose, onSendRequest, onToggleBookmark, sen
             </section>
           )}
 
-          {buddy.learningStyle && (
+          {(buddy.learningStyles?.length > 0 || buddy.learningStyle) && (
             <section className="detail-section">
-              <strong>Learning style</strong>
-              <p>{buddy.learningStyle}</p>
+              <strong>Learning styles</strong>
+              {buddy.learningStyles?.length > 0
+                ? renderTags(buddy.learningStyles, 'badge-primary')
+                : <p>{buddy.learningStyle}</p>}
             </section>
           )}
 

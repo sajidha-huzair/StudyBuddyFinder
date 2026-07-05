@@ -1,12 +1,17 @@
 from django.db.models import Q
 from django.utils import timezone
+from django.http import FileResponse
+import mimetypes
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
-from .models import StudySession, SessionParticipant, SessionStatus
+from .models import StudySession, SessionParticipant, SessionStatus, SessionAgenda, SessionNote, SessionSummary, SubjectVaultFile
 from .serializers import StudySessionSerializer, StudySessionCreateSerializer
+from .lifecycle_serializers import SessionAgendaSerializer, SessionNoteSerializer, SessionSummarySerializer, SubjectVaultFileSerializer
+from .summary_service import generate_session_summary
+from .parent_service import create_or_refresh_parent_link, get_parent_dashboard_data
 from .update_serializers import StudySessionUpdateSerializer
 from .video import create_video_room, create_meeting_token, start_cloud_recording, stop_cloud_recording, fetch_latest_room_recording, ensure_room_chat_disabled
 from .availability_utils import get_availability_conflicts
@@ -265,6 +270,12 @@ class StudySessionViewSet(viewsets.ModelViewSet):
             except Exception:
                 pass
 
+        try:
+            from chat.group_chat import finalize_session_chat
+            finalize_session_chat(session)
+        except Exception:
+            pass
+
         return Response({
             'success': True,
             'endedAt': session.ended_at.isoformat(),
@@ -307,6 +318,11 @@ class StudySessionViewSet(viewsets.ModelViewSet):
 
         session.status = SessionStatus.COMPLETED
         session.save()
+        try:
+            from chat.group_chat import finalize_session_chat
+            finalize_session_chat(session)
+        except Exception:
+            pass
         return Response({
             'success': True,
             'message': 'Session marked as completed',
@@ -347,3 +363,227 @@ class StudySessionViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Only the organizer can delete this session'}, status=status.HTTP_403_FORBIDDEN)
         session.delete()
         return Response({'success': True, 'message': 'Session deleted'})
+
+    def _session_access(self, session, user):
+        is_participant = SessionParticipant.objects.filter(
+            session=session, user=user,
+        ).exclude(invite_status=SessionParticipant.STATUS_DECLINED).exists()
+        return is_participant or user.id in [session.creator_id, session.partner_id]
+
+    @action(detail=True, methods=['get', 'put'])
+    def agenda(self, request, pk=None):
+        session = self.get_object()
+        if not self._session_access(session, request.user):
+            return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+        agenda, _ = SessionAgenda.objects.get_or_create(session=session)
+        if request.method == 'GET':
+            return Response(SessionAgendaSerializer(agenda).data)
+
+        if request.user.id != session.creator_id:
+            return Response({'error': 'Only organizer can edit agenda'}, status=status.HTTP_403_FORBIDDEN)
+
+        ser = SessionAgendaSerializer(agenda, data=request.data, partial=True)
+        if not ser.is_valid():
+            return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+        ser.save()
+        return Response(ser.data)
+
+    @action(detail=True, methods=['get', 'post'])
+    def notes(self, request, pk=None):
+        session = self.get_object()
+        if not self._session_access(session, request.user):
+            return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+        if request.method == 'GET':
+            notes = session.notes.filter(user=request.user)
+            return Response(SessionNoteSerializer(notes, many=True).data)
+
+        note_type = request.data.get('noteType', SessionNote.NOTE_POST)
+        note, _ = SessionNote.objects.update_or_create(
+            session=session, user=request.user, note_type=note_type,
+            defaults={
+                'content': request.data.get('content', ''),
+                'weak_topics': request.data.get('weakTopics', []),
+            },
+        )
+        return Response(SessionNoteSerializer(note).data)
+
+    @action(detail=True, methods=['get', 'post'])
+    def summary(self, request, pk=None):
+        session = self.get_object()
+        if not self._session_access(session, request.user):
+            return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+        if request.method == 'GET':
+            summary = getattr(session, 'summary', None)
+            if not summary:
+                return Response({'summary_text': '', 'actionItems': [], 'aiGenerated': False})
+            return Response(SessionSummarySerializer(summary).data)
+
+        notes = list(session.notes.all())
+        agenda = getattr(session, 'agenda', None)
+        result = generate_session_summary(session, notes, agenda)
+        summary, _ = SessionSummary.objects.update_or_create(
+            session=session,
+            defaults={
+                'summary_text': result['summary_text'],
+                'action_items': result['action_items'],
+                'ai_generated': result['ai_generated'],
+                'created_by': request.user,
+            },
+        )
+        return Response(SessionSummarySerializer(summary).data)
+
+    @action(detail=True, methods=['get', 'post'])
+    def vault(self, request, pk=None):
+        session = self.get_object()
+        if not self._session_access(session, request.user):
+            return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+        if request.method == 'GET':
+            files = SubjectVaultFile.objects.filter(session=session, user=request.user)
+            return Response(SubjectVaultFileSerializer(files, many=True, context={'request': request}).data)
+
+        upload = request.FILES.get('file')
+        if not upload:
+            return Response({'error': 'file is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        vault_file = SubjectVaultFile.objects.create(
+            user=request.user,
+            session=session,
+            subject=session.course,
+            title=request.data.get('title') or upload.name,
+            file=upload,
+            file_size=upload.size,
+        )
+        return Response(
+            SubjectVaultFileSerializer(vault_file, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=False, methods=['get', 'post'])
+    def vault_all(self, request):
+        if request.method == 'GET':
+            subject = request.query_params.get('subject', '')
+            qs = SubjectVaultFile.objects.filter(user=request.user)
+            if subject:
+                qs = qs.filter(subject__iexact=subject)
+            return Response(SubjectVaultFileSerializer(qs, many=True, context={'request': request}).data)
+
+        upload = request.FILES.get('file')
+        if not upload:
+            return Response({'error': 'file is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        subject = (request.data.get('subject') or '').strip()
+        if not subject:
+            return Response({'error': 'subject is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        session = None
+        session_id = request.data.get('sessionId')
+        if session_id:
+            try:
+                session = StudySession.objects.get(pk=session_id)
+            except StudySession.DoesNotExist:
+                return Response({'error': 'Session not found'}, status=status.HTTP_404_NOT_FOUND)
+            if not self._session_access(session, request.user):
+                return Response({'error': 'Not authorized for this session'}, status=status.HTTP_403_FORBIDDEN)
+
+        vault_file = SubjectVaultFile.objects.create(
+            user=request.user,
+            session=session,
+            subject=subject,
+            title=request.data.get('title') or upload.name,
+            file=upload,
+            file_size=upload.size,
+        )
+        return Response(
+            SubjectVaultFileSerializer(vault_file, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=False, methods=['patch', 'delete'], url_path=r'vault_files/(?P<file_id>[^/.]+)')
+    def vault_file(self, request, file_id=None):
+        try:
+            vault_file = SubjectVaultFile.objects.get(pk=file_id, user=request.user)
+        except SubjectVaultFile.DoesNotExist:
+            return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.method == 'DELETE':
+            if vault_file.file:
+                vault_file.file.delete(save=False)
+            vault_file.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        title = (request.data.get('title') or '').strip()
+        if not title:
+            return Response({'error': 'title is required'}, status=status.HTTP_400_BAD_REQUEST)
+        vault_file.title = title[:200]
+        vault_file.save(update_fields=['title'])
+        return Response(SubjectVaultFileSerializer(vault_file, context={'request': request}).data)
+
+    @action(detail=False, methods=['get'], url_path=r'vault_files/(?P<file_id>[^/.]+)/preview')
+    def vault_file_preview(self, request, file_id=None):
+        try:
+            vault_file = SubjectVaultFile.objects.get(pk=file_id, user=request.user)
+        except SubjectVaultFile.DoesNotExist:
+            return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not vault_file.file:
+            return Response({'error': 'File missing'}, status=status.HTTP_404_NOT_FOUND)
+
+        filename = vault_file.file.name.split('/')[-1]
+        mime, _ = mimetypes.guess_type(filename)
+        response = FileResponse(
+            vault_file.file.open('rb'),
+            content_type=mime or 'application/octet-stream',
+        )
+        safe_name = vault_file.title.replace('"', '')
+        response['Content-Disposition'] = f'inline; filename="{safe_name}"'
+        return response
+
+    @action(detail=False, methods=['post'], url_path=r'vault_files/(?P<file_id>[^/.]+)/share')
+    def vault_file_share(self, request, file_id=None):
+        try:
+            vault_file = SubjectVaultFile.objects.get(pk=file_id, user=request.user)
+        except SubjectVaultFile.DoesNotExist:
+            return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        buddy_id = request.data.get('buddyId') or request.data.get('buddy_id')
+        room_id = request.data.get('roomId') or request.data.get('room_id')
+        note = request.data.get('message') or request.data.get('content') or ''
+
+        try:
+            from .vault_share import share_vault_file
+            result = share_vault_file(
+                vault_file,
+                request.user,
+                buddy_id=buddy_id,
+                room_id=room_id,
+                note=note,
+            )
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'success': True, **result})
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def parent_link(self, request):
+        try:
+            link, view_url = create_or_refresh_parent_link(request.user, request.data.get('parentEmail'))
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'success': True, 'viewUrl': view_url, 'parentEmail': link.parent_email})
+
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
+    def parent_view(self, request):
+        token = request.query_params.get('token', '')
+        data = get_parent_dashboard_data(token)
+        if not data:
+            return Response({'error': 'Invalid or expired link'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(data)
+
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
+    def templates(self, request):
+        from users.curriculum import PAST_PAPER_TEMPLATES
+        return Response(PAST_PAPER_TEMPLATES)

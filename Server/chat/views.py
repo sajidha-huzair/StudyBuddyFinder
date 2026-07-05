@@ -118,9 +118,39 @@ class MessageViewSet(viewsets.ViewSet):
                 pass
 
         data = MessageSerializer(messages, many=True, context={'request': request}).data
+        q = (request.query_params.get('q') or '').strip().lower()
+        if q:
+            data = [item for item in data if q in (item.get('content') or '').lower()]
         for item in data:
             item['sender'] = 'me' if item['senderId'] == user.id else 'buddy'
         return Response(data)
+
+    @action(detail=False, methods=['get'], url_path='with/(?P<buddy_id>[^/.]+)/media')
+    def buddy_media(self, request, buddy_id=None):
+        from chat.room_views import _media_item_from_message
+
+        user = request.user
+        try:
+            buddy = User.objects.get(id=buddy_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not _are_buddies(user, buddy):
+            return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+        messages = Message.objects.filter(
+            Q(sender=user, recipient=buddy) | Q(sender=buddy, recipient=user)
+        ).select_related('sender').order_by('-created_at')
+
+        media = {'media': [], 'docs': [], 'links': [], 'recordings': []}
+        for msg in messages:
+            item = _media_item_from_message(msg, request)
+            if not item:
+                continue
+            cat = item.pop('category', 'docs')
+            if cat in media:
+                media[cat].append(item)
+        return Response(media)
 
     def create(self, request):
         recipient_id = request.data.get('recipient_id') or request.data.get('recipientId')

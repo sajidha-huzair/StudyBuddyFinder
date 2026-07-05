@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FiPlus, FiCalendar, FiCheck, FiVideo } from 'react-icons/fi';
 import sessionService from '../../services/sessionService';
@@ -6,10 +6,11 @@ import SessionVideoModal from '../../components/sessions/SessionVideoModal';
 import SessionDetailModal from '../../components/sessions/SessionDetailModal';
 import CreateSessionModal from '../../components/sessions/CreateSessionModal';
 import { useAuth } from '../../contexts/AuthContext';
+import { sessionTabForRecord } from '../../utils/sessionNav';
 import { toast } from 'react-toastify';
 
 const StudySessionPage = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -18,6 +19,7 @@ const StudySessionPage = () => {
   const [videoSession, setVideoSession] = useState(null);
   const [videoData, setVideoData] = useState(null);
   const [detailSession, setDetailSession] = useState(null);
+  const [highlightSessionId, setHighlightSessionId] = useState(null);
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -35,16 +37,64 @@ const StudySessionPage = () => {
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    loadSessions();
-  }, [filter]);
-
-  const loadSessions = async () => {
+  const loadSessions = useCallback(async (tab = filter) => {
     try {
-      setSessions(await sessionService.getSessions(filter));
+      return await sessionService.getSessions(tab);
     } catch {
       toast.error('Failed to load sessions');
+      return [];
     }
+  }, [filter]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const data = await loadSessions(filter);
+      if (!cancelled) setSessions(data);
+    })();
+    return () => { cancelled = true; };
+  }, [filter, loadSessions]);
+
+  useEffect(() => {
+    const sessionId = searchParams.get('session');
+    if (!sessionId) return undefined;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const session = await sessionService.getSessionById(sessionId);
+        if (cancelled) return;
+        const tab = sessionTabForRecord(session);
+        setFilter(tab);
+        const list = await sessionService.getSessions(tab);
+        if (cancelled) return;
+        setSessions(list);
+        const found = list.find((s) => String(s.id) === String(sessionId)) || session;
+        setDetailSession(found);
+        setHighlightSessionId(String(sessionId));
+        window.setTimeout(() => {
+          document.getElementById(`session-card-${sessionId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 150);
+      } catch {
+        if (!cancelled) toast.error('Session not found');
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [searchParams]);
+
+  const changeTab = (tab) => {
+    setFilter(tab);
+    setDetailSession(null);
+    setHighlightSessionId(null);
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', tab);
+    next.delete('session');
+    setSearchParams(next, { replace: true });
+  };
+
+  const refreshSessions = async () => {
+    setSessions(await loadSessions(filter));
   };
 
   const handleJoinVideo = async (session, e) => {
@@ -64,7 +114,7 @@ const StudySessionPage = () => {
     try {
       await sessionService.acceptInvite(sessionId);
       toast.success('Invitation accepted!');
-      loadSessions();
+      refreshSessions();
     } catch {
       toast.error('Failed to accept invitation');
     }
@@ -75,7 +125,7 @@ const StudySessionPage = () => {
     try {
       await sessionService.declineInvite(sessionId);
       toast.info('Invitation declined');
-      loadSessions();
+      refreshSessions();
     } catch {
       toast.error('Failed to decline invitation');
     }
@@ -97,7 +147,7 @@ const StudySessionPage = () => {
 
       <div className="filter-tabs">
         {['upcoming', 'invitations', 'past'].map(tab => (
-          <button key={tab} className={filter === tab ? 'active' : ''} onClick={() => setFilter(tab)}>
+          <button key={tab} className={filter === tab ? 'active' : ''} onClick={() => changeTab(tab)}>
             {tab === 'invitations' ? 'Invitations' : tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
@@ -116,7 +166,12 @@ const StudySessionPage = () => {
           </div>
         ) : (
           sessions.map(session => (
-            <div key={session.id} className="session-card card" onClick={() => setDetailSession(session)}>
+            <div
+              key={session.id}
+              id={`session-card-${session.id}`}
+              className={`session-card card ${highlightSessionId === String(session.id) ? 'session-card-highlight' : ''}`}
+              onClick={() => setDetailSession(session)}
+            >
               <span className="session-badge">{session.subject}</span>
               <h3>{session.title}</h3>
               {session.organizer && (
@@ -162,8 +217,14 @@ const StudySessionPage = () => {
         <SessionDetailModal
           session={detailSession}
           filter={filter}
-          onClose={() => setDetailSession(null)}
-          onUpdated={loadSessions}
+          onClose={() => {
+            setDetailSession(null);
+            setHighlightSessionId(null);
+            const next = new URLSearchParams(searchParams);
+            next.delete('session');
+            setSearchParams(next, { replace: true });
+          }}
+          onUpdated={refreshSessions}
           onJoinVideo={(s) => handleJoinVideo(s)}
         />
       )}
@@ -177,14 +238,14 @@ const StudySessionPage = () => {
             return buddy ? { id: buddy.id, name: buddy.name } : null;
           })()}
           onClose={() => { setVideoSession(null); setVideoData(null); }}
-          onMeetingEnded={loadSessions}
+          onMeetingEnded={refreshSessions}
         />
       )}
 
       <CreateSessionModal
         open={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onCreated={loadSessions}
+        onCreated={refreshSessions}
         initialBuddyIds={initialBuddyIds}
       />
     </div>

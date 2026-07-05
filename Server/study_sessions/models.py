@@ -125,3 +125,98 @@ class SessionRecording(models.Model):
     def __str__(self):
         return f'Recording for {self.session.title}'
 
+
+class SessionAgenda(models.Model):
+    session = models.OneToOneField(
+        StudySession,
+        on_delete=models.CASCADE,
+        related_name='agenda',
+    )
+    topics = models.JSONField(default=list, blank=True)
+    past_paper_ref = models.CharField(max_length=200, blank=True, default='')
+    checklist = models.JSONField(default=list, blank=True)
+    pre_read_notes = models.TextField(blank=True, default='')
+    session_goal = models.TextField(blank=True, default='')
+    template_id = models.CharField(max_length=50, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'session_agendas'
+
+
+class SessionNote(models.Model):
+    NOTE_PRE = 'pre'
+    NOTE_POST = 'post'
+    NOTE_TYPES = [(NOTE_PRE, 'Pre-session'), (NOTE_POST, 'Post-session')]
+
+    session = models.ForeignKey(StudySession, on_delete=models.CASCADE, related_name='notes')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='session_notes')
+    note_type = models.CharField(max_length=10, choices=NOTE_TYPES, default=NOTE_POST)
+    content = models.TextField(blank=True, default='')
+    weak_topics = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'session_notes'
+        unique_together = ['session', 'user', 'note_type']
+
+
+class SessionSummary(models.Model):
+    session = models.OneToOneField(
+        StudySession,
+        on_delete=models.CASCADE,
+        related_name='summary',
+    )
+    summary_text = models.TextField(blank=True, default='')
+    action_items = models.JSONField(default=list, blank=True)
+    ai_generated = models.BooleanField(default=False)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='session_summaries_created',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'session_summaries'
+
+
+class SubjectVaultFile(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='vault_files')
+    session = models.ForeignKey(
+        StudySession,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='vault_files',
+    )
+    subject = models.CharField(max_length=100)
+    title = models.CharField(max_length=200)
+    file = models.FileField(upload_to='vault/')
+    file_size = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'subject_vault_files'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.subject}: {self.title}'
+
+
+class ParentLink(models.Model):
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='parent_links')
+    parent_email = models.EmailField()
+    access_token = models.CharField(max_length=64, unique=True)
+    is_verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'parent_links'
+        unique_together = ['student', 'parent_email']
+
