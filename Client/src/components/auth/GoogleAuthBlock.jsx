@@ -56,7 +56,7 @@ const GoogleAuthBlock = ({ mode = 'signin', onSuccess }) => {
       </div>
       {import.meta.env.DEV && (
         <p className="text-muted google-dev-hint" style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
-          Google button requires <code>http://localhost:3000</code> in Google Cloud → Credentials → Authorized JavaScript origins.
+          Google button requires <code>http://localhost:3000</code> in Google Cloud → Authorized JavaScript origins.
         </p>
       )}
       <div className="auth-divider">
