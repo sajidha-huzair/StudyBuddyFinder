@@ -12,7 +12,6 @@ const SessionDetailModal = ({ session, filter, onClose, onUpdated, onJoinVideo }
   const [form, setForm] = useState({});
   const [chatRoomId, setChatRoomId] = useState(session?.chatRoomId || null);
 
-  const sessionFormat = 'online';
   const isOnline = true;
 
   useEffect(() => {

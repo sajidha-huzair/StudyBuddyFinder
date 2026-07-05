@@ -4,7 +4,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../contexts/AuthContext';
 import authService from '../../services/authService';
-import ProfileFormSteps, { buildInitialValues, buildProfilePayload, getSelectableSubjects } from '../../components/profile/ProfileFormSteps';
+import ProfileFormSteps, { buildInitialValues, buildProfilePayload } from '../../components/profile/ProfileFormSteps';
 import { toast } from 'react-toastify';
 import './ProfileSetup.css';
 

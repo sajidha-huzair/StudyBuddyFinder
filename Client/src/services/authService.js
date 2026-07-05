@@ -7,7 +7,7 @@ const formatAuthError = (error) => {
   if (data.error) return data.error;
   if (data.detail) return data.detail;
   const parts = [];
-  Object.entries(data).forEach(([field, messages]) => {
+  Object.entries(data).forEach(([, messages]) => {
     const list = Array.isArray(messages) ? messages : [messages];
     list.forEach((msg) => parts.push(typeof msg === 'string' ? msg : String(msg)));
   });

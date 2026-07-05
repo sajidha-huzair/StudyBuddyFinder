@@ -1,5 +1,6 @@
 # Only workflow that publishes GitHub Pages — do not add a second Pages workflow.
-# If deploy fails, push a new commit or use "Re-run all jobs" — do not re-run only the deploy job.
+# Repo Settings → Pages → Source must be "GitHub Actions" (not "Deploy from branch").
+# If deploy fails, use "Re-run all jobs" on the full workflow — not deploy-only.
 
 name: Deploy GitHub Pages
 
@@ -15,24 +16,21 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Build and deploy
+  build:
+    name: Build frontend
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     defaults:
       run:
         working-directory: Client
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
           cache-dependency-path: Client/package-lock.json
 
@@ -50,10 +48,18 @@ jobs:
         run: cp dist/index.html dist/404.html
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: Client/dist
 
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
         id: deployment
