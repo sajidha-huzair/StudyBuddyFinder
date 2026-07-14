@@ -81,7 +81,6 @@ class StudySessionViewSet(viewsets.ModelViewSet):
         elif status_filter in ('upcoming', 'scheduled', 'pending'):
             queryset = queryset.filter(status__in=[SessionStatus.PENDING, SessionStatus.SCHEDULED])
             queryset = queryset.filter(scheduled_at__gte=timezone.now())
-            # Hide pending invites from main upcoming list until accepted
             accepted_or_organizer_ids = SessionParticipant.objects.filter(
                 user=user,
             ).filter(

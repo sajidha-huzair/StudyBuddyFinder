@@ -68,7 +68,7 @@ jobs:
       run:
         working-directory: Client
     env:
-      VITE_API_URL: ${{ secrets.VITE_API_URL != '' && secrets.VITE_API_URL || 'https://studybuddy-api-zrp6.onrender.com/api' }}
+      VITE_API_URL: ${{ secrets.VITE_API_URL != '' && secrets.VITE_API_URL || 'https://studybuddy-api-cy5v.onrender.com/api' }}
       VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
       VITE_BASE_PATH: /StudyBuddyFinder/
     steps:

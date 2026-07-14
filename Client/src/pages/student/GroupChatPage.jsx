@@ -49,7 +49,7 @@ const GroupChatPage = () => {
       setSessionRooms(rooms);
       setBlockedUsers(blocked);
     } catch {
-      /* sidebar optional */
+      void 0;
     }
   }, []);
 

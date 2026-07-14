@@ -1,4 +1,3 @@
-/* Standalone page titles (no page-header wrapper) */
 .requests-page > h1,
 .settings-page > h1 {
   font-size: var(--font-size-xl);
@@ -268,7 +267,6 @@
   gap: var(--spacing-sm);
 }
 
-/* Analytics stat row (used by AnalyticsPage) */
 .analytics-stats-row {
   display: grid;
   grid-template-columns: repeat(5, 1fr);

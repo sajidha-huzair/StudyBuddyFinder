@@ -1,4 +1,3 @@
-/** Map session state to the Sessions page tab. */
 export function sessionTabForRecord(session) {
   if (!session) return 'upcoming';
   if (session.status === 'completed' || session.status === 'cancelled') return 'past';

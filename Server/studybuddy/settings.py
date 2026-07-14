@@ -1,13 +1,8 @@
-"""
-Django settings for studybuddy project.
-"""
-
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
 import dj_database_url
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -16,8 +11,6 @@ def _split_env_list(value: str) -> list[str]:
         return []
     return [item.strip() for item in value.split(',') if item.strip()]
 
-
-# Quick-start development settings - unsuitable for production
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-production')
@@ -28,13 +21,10 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = _split_env_list(
     config('ALLOWED_HOSTS', default='localhost,127.0.0.1,0.0.0.0')
 )
-# Render sets RENDER=true; allow any *.onrender.com host if not configured manually.
 if config('RENDER', default=False, cast=bool):
     if '.onrender.com' not in ALLOWED_HOSTS:
         ALLOWED_HOSTS = [*ALLOWED_HOSTS, '.onrender.com']
 
-
-# Application definition
 
 INSTALLED_APPS = [
     'daphne',
@@ -44,13 +34,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
-    # Third party apps
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
-    
-    # Your apps
     'users',
     'study_sessions',
     'matches',
@@ -67,12 +53,11 @@ CHANNEL_LAYERS = {
     },
 }
 
-# Video sessions — Daily.co (10,000 free participant-minutes/month) or Jitsi fallback
 DAILY_API_KEY = config('DAILY_API_KEY', default='')
 JITSI_DOMAIN = config('JITSI_DOMAIN', default='meet.jit.si')
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # CORS must be first
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -104,10 +89,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'studybuddy.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
 _database_url = config('DATABASE_URL', default='')
 if _database_url:
     DATABASES = {
@@ -130,12 +111,7 @@ else:
     }
 
 
-# Custom User Model
 AUTH_USER_MODEL = 'users.User'
-
-
-# Password validation
-# https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -153,9 +129,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/5.0/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
@@ -163,10 +136,6 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -179,13 +148,8 @@ STORAGES = {
     },
 }
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
-# REST Framework Settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -203,7 +167,6 @@ REST_FRAMEWORK = {
     ],
 }
 
-# JWT Settings
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('ACCESS_TOKEN_EXPIRE_MINUTES', default=30, cast=int)),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
@@ -214,7 +177,6 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# CORS Settings
 _cors_origins = _split_env_list(config('CORS_ALLOWED_ORIGINS', default=''))
 if _cors_origins:
     CORS_ALLOWED_ORIGINS = _cors_origins
@@ -237,11 +199,9 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
-# Auth extras
 GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 
-# Media uploads (local dev; use S3 + django-storages in production)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 CHAT_UPLOAD_MAX_BYTES = 5 * 1024 * 1024

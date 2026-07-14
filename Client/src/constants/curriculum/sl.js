@@ -122,7 +122,6 @@ export function getExamCountdown(examYear, gradeBand) {
   return { days, label: gradeBand === 'OL' ? 'O/L' : 'A/L', examDate };
 }
 
-/** Flat list of all subjects for a user profile (for sessions, vault, etc.) */
 export function flattenSubjects(profile) {
   if (!profile) return [];
   const gradeBand = profile.gradeBand || profile.grade_band;

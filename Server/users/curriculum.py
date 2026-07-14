@@ -1,4 +1,3 @@
-"""Sri Lankan school curriculum constants (Grades 6–13)."""
 
 GRADE_BANDS = {
     'JUNIOR': {'label': 'Grades 6–9', 'education_level': 'Grades 6-9', 'grades': [6, 7, 8, 9]},
@@ -103,7 +102,6 @@ def grade_band_for_grade(grade):
 
 
 def grades_compatible(grade1, grade2):
-    """Same band; adjacent grades allowed within OL (10↔11) and AL (12↔13)."""
     try:
         g1, g2 = int(grade1), int(grade2)
     except (TypeError, ValueError):
@@ -121,7 +119,6 @@ def grades_compatible(grade1, grade2):
 
 
 def mentor_grades_compatible(mentor_grade, mentee_grade):
-    """A/L mentor (12–13) may mentor O/L mentee (10–11) when mentor mode is on."""
     try:
         mg, lg = int(mentor_grade), int(mentee_grade)
     except (TypeError, ValueError):

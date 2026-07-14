@@ -1,5 +1,3 @@
-"""Generate session summaries — AI when OPENAI_API_KEY is set, else rule-based."""
-
 import os
 import json
 

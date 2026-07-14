@@ -164,6 +164,7 @@ const SubjectVaultPage = () => {
             className="btn btn-primary btn-sm vault-upload-btn"
             disabled={uploading}
             onClick={() => fileInputRef.current?.click()}
+            
           >
             {uploading ? 'Uploading…' : 'Upload file'}
           </button>

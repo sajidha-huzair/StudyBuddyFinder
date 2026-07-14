@@ -8,7 +8,6 @@ from study_sessions.models import SessionParticipant, StudySession
 
 
 def ensure_session_chat_room(session):
-    """Create or refresh the group chat for a study session."""
     title = f'{session.title} · {session.course}'
     room, created = ChatRoom.objects.get_or_create(
         session=session,
@@ -60,7 +59,6 @@ def post_session_planned_to_room(session):
 
 
 def finalize_session_chat(session):
-    """After a session ends, archive summary, recording, and notes into the group chat."""
     room = ChatRoom.objects.filter(session=session).first()
     if not room:
         room = ensure_session_chat_room(session)

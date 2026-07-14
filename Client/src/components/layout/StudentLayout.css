@@ -390,7 +390,6 @@
   min-width: 0;
 }
 
-/* Chat pages — lock layout so sidebar and thread scroll independently */
 .main-content:has(.page-content > .chat-page) {
   overflow: hidden;
   height: 100vh;
@@ -407,7 +406,6 @@
   height: auto;
 }
 
-/* Tablet & mobile — sidebar becomes overlay drawer */
 @media (max-width: 1024px) {
   .sidebar {
     transform: translateX(-100%);

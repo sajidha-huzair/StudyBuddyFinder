@@ -1,4 +1,3 @@
-/* Student sessions & chat — responsive, mobile-friendly */
 
 .sessions-page .page-header {
   flex-wrap: wrap;
@@ -1352,7 +1351,7 @@
   border-radius: var(--radius-full);
 }
 
-/* Icon / grid view — PC folder tiles */
+/* Icon / grid view */
 .vault-file-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));

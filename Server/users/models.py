@@ -33,7 +33,7 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True, db_index=True)
     username = models.CharField(max_length=150, unique=True, db_index=True)
-    hashed_password = models.CharField(max_length=255)  # Use existing column name
+    hashed_password = models.CharField(max_length=255)
     full_name = models.CharField(max_length=255, blank=True, null=True)
     role = models.CharField(
         max_length=20,
@@ -41,35 +41,32 @@ class User(AbstractBaseUser, PermissionsMixin):
         default=UserRole.STUDENT
     )
     
-    # Profile fields
     bio = models.TextField(blank=True, null=True)
     education_level = models.CharField(max_length=50, blank=True, null=True)
     university = models.CharField(max_length=200, blank=True, null=True)
     major = models.CharField(max_length=100, blank=True, null=True)
     year = models.CharField(max_length=50, blank=True, null=True)
     grade = models.CharField(max_length=20, blank=True, null=True)
-    grade_band = models.CharField(max_length=20, blank=True, null=True)  # JUNIOR, OL, AL
-    stream = models.CharField(max_length=40, blank=True, null=True)  # A/L stream key
-    medium = models.CharField(max_length=20, blank=True, null=True)  # Sinhala, Tamil, English
+    grade_band = models.CharField(max_length=20, blank=True, null=True)
+    stream = models.CharField(max_length=40, blank=True, null=True)
+    medium = models.CharField(max_length=20, blank=True, null=True)
     exam_year = models.IntegerField(blank=True, null=True)
     district = models.CharField(max_length=80, blank=True, null=True)
     mentor_mode = models.BooleanField(default=False)
     parent_email = models.EmailField(blank=True, null=True)
     school_verified = models.BooleanField(default=False)
-    courses = models.TextField(default='[]', blank=True)  # stores: subjects, strengths, weaknesses
-    study_preferences = models.TextField(default='{}', blank=True)  # stores: learningStyle, studyGoals, etc.
+    courses = models.TextField(default='[]', blank=True)
+    study_preferences = models.TextField(default='{}', blank=True)
     availability = models.TextField(default='{}', blank=True)
     
-    # Status fields
     is_active = models.BooleanField(default=True)
     is_verified = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
-    is_superuser = models.BooleanField(default=False)  # Required by PermissionsMixin
+    is_superuser = models.BooleanField(default=False)
     
-    # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
-    last_login = models.DateTimeField(null=True, blank=True)  # Required by AbstractBaseUser
+    last_login = models.DateTimeField(null=True, blank=True)
     last_active_at = models.DateTimeField(null=True, blank=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     
@@ -85,7 +82,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.username
     
-    # Map Django's password field to database's hashed_password column
     def get_password(self):
         return self.hashed_password
     
@@ -97,14 +93,12 @@ class User(AbstractBaseUser, PermissionsMixin):
         from django.contrib.auth.hashers import check_password
         return check_password(raw_password, self.hashed_password)
     
-    # Property to make Django's auth work
     @property
     def password(self):
         return self.hashed_password
     
     @password.setter
     def password(self, value):
-        # If it's already hashed, store it directly; otherwise hash it
         if value.startswith('pbkdf2_sha256$') or value.startswith('bcrypt$'):
             self.hashed_password = value
         else:

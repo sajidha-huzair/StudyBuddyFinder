@@ -1,6 +1,3 @@
-"""
-ASGI config for studybuddy project.
-"""
 import os
 
 from channels.routing import ProtocolTypeRouter, URLRouter

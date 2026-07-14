@@ -1,5 +1,3 @@
-"""Normalize learning style prefs (supports legacy single string or array)."""
-
 
 def learning_styles_from_prefs(prefs):
     if not prefs:

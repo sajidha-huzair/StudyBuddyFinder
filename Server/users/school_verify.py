@@ -1,8 +1,5 @@
-"""School email verification for Sri Lankan students."""
-
 import re
 
-# Common school email patterns in Sri Lanka
 SCHOOL_EMAIL_PATTERNS = [
     r'@.*\.sch\.lk$',
     r'@.*\.school\.lk$',

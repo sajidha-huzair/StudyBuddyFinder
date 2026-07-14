@@ -125,7 +125,7 @@ const SettingsPage = () => {
             setLocale(e.target.value);
             try {
               await authService.updateProfile({ locale: e.target.value });
-            } catch { /* local only ok */ }
+            } catch { void 0; }
           }}>
             <option value="en">English</option>
             <option value="si">සිංහල</option>
